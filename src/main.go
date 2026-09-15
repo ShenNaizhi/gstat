@@ -1,11 +1,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"strings"
-	"os"
 	"log"
+	"os"
+	"os/user"
+	"flag"
 )
 
 // when given a path, scan() crawls it and its subfolders
@@ -20,11 +21,16 @@ func scan(folder string) {
 	fmt.Printf("\n\nSuccessfully added\n\n")
 }
 
-// scanGitFolders() returns a list of subfolders of `folder` ending with `.git`.
+// starts the recursive search of git repo living in the `folder` subtree
+func recursiveScanFolders(folder string) []string {
+	return scanGitFolders([]string{}, folder)
+}
+
+// returns a list of subfolders of `folder` ending with `.git`.
 // Returns the base folder of the repo, the `.git` folder parent.
 // Recursively searches in the subfolders by passing an existing `folders` slice.
 func scanGitFolders(folders []string, folder string) []string {
-	// trim the last "/"
+	// trim the last `/`
 	folder = strings.TrimSuffix(folder, "/")
 
 	f, err := os.Open(folder)
@@ -44,20 +50,19 @@ func scanGitFolders(folders []string, folder string) []string {
 		"node_modules": true,
 	}
 	for _, file := range files {
-		// only check dirs
-		if !file.IsDir() {
+		if !file.IsDir() { // only check directories
 			continue
 		}
 
 		fileName := file.Name()
 
-		if fileName == ".git" {
+		if fileName == ".git" { // end with `.git`
 			fmt.Println(path)
 			folders = append(folders, path)
 			continue
 		}
 
-		if toSkip[fileName] {
+		if toSkip[fileName] { // skip unrelated folders
 			continue
 		}
 
@@ -66,6 +71,19 @@ func scanGitFolders(folders []string, folder string) []string {
 	}
 
 	return folders
+}
+
+// Returns the dot file path of the repos list.
+// Create the dot file and the enclosing folder if they do not exist.
+func getDotFilePath() string {
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res := usr.HomeDir + "/.gogitlocalstats"
+
+	return res
 }
 
 // stats() generates a graph of the local Git contributions
