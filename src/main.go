@@ -1,26 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"flag"
-)
-
-// when given a path, scan() crawls it and its subfolders
-// searching for Git repositories
-func scan(folder string) {
-	fmt.Printf("Found folders:\n\n")
-
-	repositories := recursiveScanFolder(folder) // get a slice of strings
-	filePath := getDotFilePath() // get the path of the dot file for output
-	addNewRepoPathToFile(filePath, repositories) // output the slice contents to dot file
-
-	fmt.Printf("\n\nSuccessfully added\n\n")
-}
-
-// stats() generates a graph of the local Git contributions
-func stats(email string) {
-	print("stats")
-}
+import "flag"
 
 func main() {
 	var folder, email string

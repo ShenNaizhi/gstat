@@ -6,10 +6,24 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"bufio"
+	"path/filepath"
 )
 
+// when given a path, scan() crawls it and its subfolders
+// searching for Git repositories
+func scan(folder string) {
+	fmt.Printf("Found folders:\n\n")
+
+	repositories := recursiveScanFolder(folder) // get a slice of strings
+	filePath := getDotFilePath() // get the path of the dot file for output
+	addNewRepoPathsToFile(filePath, repositories) // output the slice contents to dot file
+
+	fmt.Printf("\n\nSuccessfully added\n\n")
+}
+
 // starts the recursive search of git repo living in the `folder` subtree
-func recursiveScanFolders(folder string) []string {
+func recursiveScanFolder(folder string) []string {
 	return scanGitFolders([]string{}, folder)
 }
 
@@ -52,8 +66,8 @@ func scanGitFolders(folders []string, folder string) []string {
 		if toSkip[fileName] { // skip unrelated folders
 			continue
 		}
-
-		path = path + "/" + fileName
+		
+		path = filepath.Join(folder, fileName)
 		folders = scanGitFolders(folders, path)
 	}
 
@@ -74,7 +88,7 @@ func getDotFilePath() string {
 }
 
 // Give a slice of strings representing repo paths, store them in the file system.
-// Adapted from `addNewSliceElementsToFile()`.
+// Adapted from `addNewSliceElementsToFile()` in original tutorial.
 func addNewRepoPathsToFile(filePath string, repos []string) {
 	existingRepos := parseFileLinesToSlice(filePath)
 	toPersist := joinSlices(existingRepos, repos)
@@ -101,7 +115,7 @@ func parseFileLinesToSlice(filePath string) []string {
 
 // Opens the target file at `filePath`. Creates it if not existing.
 func openFile(filePath string) *os.File {
-	res, err := os.Open(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) // change 0755 (original in tutorial) by 0644
+	res, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) // change 0755 (original in tutorial) by 0644
 	if err != nil {
 		panic(err)
 	}
@@ -126,6 +140,7 @@ func joinSlices(to []string, from []string) []string {
 }
 
 // Writes contents of `repos` in file at `filePath` (totally overwrite).
+// Adapted from `dumpStringsSliceToFile()` in original tutorial.
 func persistRepoPathsToFile(repos []string, filePath string) {
 	data := strings.Join(repos, "\n")
 	os.WriteFile(filePath, []byte(data), 0644) // Change 0755 (original in tutorial) by 0644
