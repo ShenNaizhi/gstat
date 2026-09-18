@@ -5,7 +5,6 @@ import (
 	"strings"
 	"log"
 	"os"
-	"os/user"
 	"bufio"
 	"path/filepath"
 )
@@ -16,10 +15,10 @@ func scan(folder string) {
 	fmt.Printf("Found folders:\n\n")
 
 	repositories := recursiveScanFolder(folder) // get a slice of strings
-	filePath := getDotFilePath() // get the path of the dot file for output
+	filePath := dotFilePath() // get the path of the dot file for output
 	addNewRepoPathsToFile(filePath, repositories) // output the slice contents to dot file
 
-	fmt.Printf("\n\nSuccessfully added\n\n")
+	fmt.Printf("\n\nSuccessfully added.\n\n")
 }
 
 // starts the recursive search of git repo living in the `folder` subtree
@@ -31,9 +30,6 @@ func recursiveScanFolder(folder string) []string {
 // Returns the base folder of the repo, the `.git` folder parent.
 // Recursively searches in the subfolders by passing an existing `folders` slice.
 func scanGitFolders(folders []string, folder string) []string {
-	// trim the last `/`
-	folder = strings.TrimSuffix(folder, "/")
-
 	f, err := os.Open(folder)
 	if err != nil {
 		log.Fatal(err)
@@ -56,18 +52,17 @@ func scanGitFolders(folders []string, folder string) []string {
 		}
 
 		fileName := file.Name()
-
+		if toSkip[fileName] { // skip unrelated folders
+			continue
+		}
+		
+		path = filepath.Join(folder, fileName)
 		if fileName == ".git" { // end with `.git`
 			fmt.Println(path)
 			folders = append(folders, path)
 			continue
 		}
 
-		if toSkip[fileName] { // skip unrelated folders
-			continue
-		}
-		
-		path = filepath.Join(folder, fileName)
 		folders = scanGitFolders(folders, path)
 	}
 
@@ -76,13 +71,31 @@ func scanGitFolders(folders []string, folder string) []string {
 
 // Returns the dot file path of the repos list.
 // Create the dot file and the enclosing folder if they do not exist.
-func getDotFilePath() string {
+// Adapted from `getDotFilePath()` from the original tutorial.
+func dotFilePath() string {
+	/*
 	usr, err := user.Current()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	res := usr.HomeDir + "/.gogitlocalstats"
+	*/
+
+	// Adapt from the original tutorial,
+	// make the dot file and the whole program in the same path.
+	res, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res, err = filepath.EvalSymlinks(res) // to prevent res being a symlink
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res = filepath.Dir(res) // discard the executable's name
+	res = filepath.Join(res, ".gogitlocalstats") // dot file path
 
 	return res
 }
@@ -115,7 +128,7 @@ func parseFileLinesToSlice(filePath string) []string {
 
 // Opens the target file at `filePath`. Creates it if not existing.
 func openFile(filePath string) *os.File {
-	res, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) // change 0755 (original in tutorial) by 0644
+	res, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644) // change 0755 (original in tutorial) by 0644
 	if err != nil {
 		panic(err)
 	}
@@ -133,6 +146,7 @@ func joinSlices(to []string, from []string) []string {
 	for _, el := range from {
 		if !set[el] {
 			to = append(to, el)
+			set[el] = true
 		}
 	}
 
