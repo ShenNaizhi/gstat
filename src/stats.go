@@ -1,10 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"time"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5"
-	"gopkg.in/src-d/go-git.v5"
 )
 
 const lookbackDays = 183
@@ -35,7 +34,7 @@ func processRepos(email string) map[int]int {
 
 // Given a repo found in `path`, counts the frequency of commits and
 // puts them in `commits`, returns it when completes.
-func fillCommits(email string, path string, commits map[int][int]) map[int]int {
+func fillCommits(email string, path string, commits map[int]int) map[int]int {
 	// instantiate a git repo object from `path`
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -49,7 +48,7 @@ func fillCommits(email string, path string, commits map[int][int]) map[int]int {
 	}
 
 	// get the commits history starting from HEAD
-	iter, err := repo.Log(&git.LogOptions({From: ref.Hash()}))
+	iter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
 	if err != nil {
 		panic(err)
 	}
@@ -61,9 +60,9 @@ func fillCommits(email string, path string, commits map[int][int]) map[int]int {
 			return nil
 		}
 
-		days := countDaysSinceDate(c.Author.When) + offset
+		days := daysBetween(c.Author.When, time.Now())
 		if days <= lookbackDays {
-			commits[days]++
+			commits[days + offset]++
 		}
 
 		return nil
@@ -73,4 +72,26 @@ func fillCommits(email string, path string, commits map[int][int]) map[int]int {
 	}
 
 	return commits
+}
+
+// Counts how many days between 2 dates.
+// Adapted from `countDaysSinceDate()` in the original tutorial.
+func daysBetween(from, to time.Time) int {
+	if from.After(to) { // ensure `from` is before `to`
+		from, to = to, from
+	}
+
+	// unify into UTC 00:00 before calculation
+	y1, m1, d1 := from.Date()
+	y2, m2, d2 := to.Date()
+	from = time.Date(y1, m1, d1, 0, 0, 0, 0, time.UTC)
+	to = time.Date(y2, m2, d2, 0, 0, 0, 0, time.UTC)
+
+	return int(to.Sub(from).Hours() / 24)
+}
+
+// Returns the amount of days missing to fill the last column of the stats graph.
+// Adapted from `calcOffset()` in the original tutorial.
+func calcWeekdayOffset() int {
+	return int(7 - time.Now().Weekday())
 }
