@@ -2,9 +2,12 @@ package main
 
 import (
 	"time"
+	"sort"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5"
 )
+
+type column []int
 
 const lookbackDays = 183
 
@@ -93,5 +96,55 @@ func daysBetween(from, to time.Time) int {
 // Returns the amount of days missing to fill the last column of the stats graph.
 // Adapted from `calcOffset()` in the original tutorial.
 func calcWeekdayOffset() int {
-	return int(7 - time.Now().Weekday())
+	res := int(7 - time.Now().Weekday()) // American standard
+	
+	res = res % 7 + 1 // ISO 8601: Monday is the first day of a week
+
+	return res
+}
+
+// Render the git commit stats in terminal.
+func printCommitsStats(commits map[int]int) {
+	keys := sortedMapKeys(commits)
+	cols := buildCols(keys, commits)
+	printCells(cols)
+}
+
+// Returns a slice of keys of `m` in ascending order.
+// Adapted from 'sortMapIntoSlice()' in the original tutorial.
+func sortedMapKeys(m map[int]int) []int {
+	res := []int{}
+	for k := range m {
+		res = append(res, k)
+	}
+	sort.Ints(res)
+
+	return res
+}
+
+func buildCols(keys []int, commits map[int]int) map[int]column {
+	res := map[int]column{}
+	col := column{}
+
+	for _, k := range keys {
+		week := k / 7
+		weekday := k % 7
+
+		if weekday == 0 { // the first day of a week
+			col = column{} // reset
+		}
+
+		col = append(col, commits[k])
+
+		if week == 6 { // the last day of a week
+			res[week] = col // complete a column
+		}
+	}
+
+	return res
+}
+
+// Render the whole stats graph
+func printCells(cols map[int]column) {
+
 }
