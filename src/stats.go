@@ -146,5 +146,10 @@ func buildCols(keys []int, commits map[int]int) map[int]column {
 
 // Render the whole stats graph
 func printCells(cols map[int]column) {
+	printMonths() // column number
 
+	totalWeeks := (lookbackDays - 1) / 7 + 1
+	for wd := 0; wd < 7; wd++ { // wd: weekday
+		?
+	}
 }
