@@ -57,7 +57,7 @@ func fillCommits(email string, path string, commits map[int]int) map[int]int {
 	}
 
 	// iterate on commits
-	offset := calcWeekdayOffset()
+	offset := weekdayOffset()
 	err = iter.ForEach(func (c *object.Commit) error {
 		if c.Author.Email != email { // not target user
 			return nil
@@ -95,9 +95,8 @@ func daysBetween(from, to time.Time) int {
 
 // Returns the amount of days missing to fill the last column of the stats graph.
 // Adapted from `calcOffset()` in the original tutorial.
-func calcWeekdayOffset() int {
-	res := int(7 - time.Now().Weekday()) // American standard
-	
+func weekdayOffset() int {
+	res := int(time.Now().Weekday()) // American standard
 	res = res % 7 + 1 // ISO 8601: Monday is the first day of a week
 
 	return res
@@ -146,10 +145,26 @@ func buildCols(keys []int, commits map[int]int) map[int]column {
 
 // Render the whole stats graph
 func printCells(cols map[int]column) {
-	printMonths() // column number
+	printMonths() // head of column
 
-	totalWeeks := (lookbackDays - 1) / 7 + 1
+	totalWeeks := (lookbackDays - 1) / 7 + 1 // ceiling
+	offset := weekdayOffset()
 	for wd := 0; wd < 7; wd++ { // wd: weekday
-		?
+		for w := totalWeeks; w >= 0; w-- { // w: current week index [0, totalWeeks)
+			if w == totalWeeks { // head of row
+				printWeekday(wd)
+			}
+
+			if c, ok := cols[w]; ok { // c: current column
+				if w == 0 && wd == offset { // today
+					printOneCell(c[wd], true)
+				} else if len(c) > wd { // other dates
+					printOneCell(c[wd], false)
+				}
+			} else {
+				printOneCell(0, false)
+			}
+		}
+		fmt.Println() // a row is rendered
 	}
 }

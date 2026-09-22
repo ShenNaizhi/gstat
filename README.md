@@ -4,6 +4,10 @@
 
 This is an offline CLI for counting local git commits, based on the email provided by the user, and rendering a heatmap of commits in the terminal.
 
+## Why "gstat"
+
+To uphold Go's philosophy (short, pragmatic...), I chose "gstat" as the name of this project, meaning "git statistics". The first character "g" can also represent "Go".
+
 ## Notes
 
 It's just a personal project for learning software engineering skills for myself.
