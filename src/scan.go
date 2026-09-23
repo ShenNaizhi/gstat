@@ -40,8 +40,7 @@ func scanGitFolders(folders []string, folder string) []string {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	path := ""
+	
 	toSkip := map[string]bool {
 		"vendor": true,
 		"node_modules": true,
@@ -56,14 +55,13 @@ func scanGitFolders(folders []string, folder string) []string {
 			continue
 		}
 		
-		path = filepath.Join(folder, fileName)
 		if fileName == ".git" { // end with `.git`
-			fmt.Println(path)
-			folders = append(folders, path)
-			continue
+			fmt.Println(folder)
+			folders = append(folders, folder)
+		} else {
+			path := filepath.Join(folder, fileName)
+			folders = scanGitFolders(folders, path)
 		}
-
-		folders = scanGitFolders(folders, path)
 	}
 
 	return folders

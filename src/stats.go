@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 	"sort"
 	"strings"
@@ -58,7 +59,7 @@ func fillCommits(email string, path string, commits map[int]int) map[int]int {
 	}
 
 	// iterate on commits
-	offset := weekdayOffset()
+	offset := weekdayOffset(time.Now())
 	err = iter.ForEach(func (c *object.Commit) error {
 		if c.Author.Email != email { // not target user
 			return nil
@@ -99,17 +100,17 @@ func normalizeToUTCMidnight(t time.Time) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
-// Returns the amount of days missing to fill the last column of the stats graph.
+// Determines the weekday represented by `t` [0, 7).
 // Adapted from `calcOffset()` in the original tutorial.
-func weekdayOffset() int {
-	res := int(time.Now().Weekday()) // American standard
+func weekdayOffset(t time.Time) int {
+	res := int(t.Weekday()) // American standard
 	res = res % 7 + 1 // ISO 8601: Monday is the first day of a week
 
 	return res
 }
 
 // Render the git commit stats in terminal.
-func printCommitsStats(commits map[int]int) {
+func printCommitStats(commits map[int]int) {
 	keys := sortedMapKeys(commits)
 	cols := buildCols(keys, commits)
 	printCells(cols)
@@ -154,7 +155,7 @@ func printCells(cols map[int]column) {
 	printMonths() // head of column
 
 	totalWeeks := (lookbackDays - 1) / 7 + 1 // ceiling
-	offset := weekdayOffset()
+	offset := weekdayOffset(time.Now())
 	for wd := 0; wd < 7; wd++ { // wd: weekday
 		for w := totalWeeks; w >= 0; w-- { // w: current week index [0, totalWeeks)
 			if w == totalWeeks { // head of row
@@ -182,7 +183,7 @@ func printMonths() {
 	cur := time.Now()
 
 	fmt.Print(strings.Repeat(" ", 9))
-	fmt.Printf("%s ", week.Month().String()[:3]) // abbreviation of weekdays
+	// fmt.Printf("%s ", week.Month().String()[:3]) // abbreviation of weekdays
 	for {
 		if week.Month() != month { // next month
 			fmt.Printf("%s ", week.Month().String()[:3]) // abbreviation of weekdays
@@ -228,4 +229,33 @@ func printWeekday(wd int) {
 	}
 
 	fmt.Print(res)
+}
+
+// Prints `val` in different formats depending on
+// it's value and `isToday` flag.
+func printOneCell(val int, isToday bool) {
+	esc := "\033[0;30m" // black background
+
+	cntLvl := []int{0, 4, 9} // commit count level
+	colorLvl := []string{"47", "43", "42"} // color level
+	for i, cnt := range cntLvl {
+		if val > cnt {
+			esc = "\033[1;30;" + colorLvl[i] + "m"
+		} else {
+			break
+		}
+	}
+
+	if isToday {
+		esc = "\033[1;37;45m"
+	}
+
+	escReset := "\033[0m"
+
+	if val == 0 {
+		fmt.Print(esc + "  - " + escReset)
+		return
+	}
+
+	fmt.Printf(esc + "%3d " + escReset, val)
 }
