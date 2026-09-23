@@ -3,8 +3,9 @@ package main
 import (
 	"time"
 	"sort"
-	"github.com/go-git/go-git/v5/plumbing/object"
+	"strings"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 type column []int
@@ -84,13 +85,18 @@ func daysBetween(from, to time.Time) int {
 		from, to = to, from
 	}
 
-	// unify into UTC 00:00 before calculation
-	y1, m1, d1 := from.Date()
-	y2, m2, d2 := to.Date()
-	from = time.Date(y1, m1, d1, 0, 0, 0, 0, time.UTC)
-	to = time.Date(y2, m2, d2, 0, 0, 0, 0, time.UTC)
+	// unify into UTC midnight before calculation
+	from = normalizeToUTCMidnight(from)
+	to = normalizeToUTCMidnight(to)
 
 	return int(to.Sub(from).Hours() / 24)
+}
+
+// Normalize a time to UTC midnight.
+func normalizeToUTCMidnight(t time.Time) time.Time {
+	y, m, d := t.Date()
+
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
 // Returns the amount of days missing to fill the last column of the stats graph.
@@ -167,4 +173,59 @@ func printCells(cols map[int]column) {
 		}
 		fmt.Println() // a row is rendered
 	}
+}
+
+// Renders the month names in the first line of the whole stat graph.
+func printMonths() {
+	week := normalizeToUTCMidnight(time.Now()).AddDate(0, 0, -lookbackDays) // during a certain week
+	month := week.Month()
+	cur := time.Now()
+
+	fmt.Print(strings.Repeat(" ", 9))
+	fmt.Printf("%s ", week.Month().String()[:3]) // abbreviation of weekdays
+	for {
+		if week.Month() != month { // next month
+			fmt.Printf("%s ", week.Month().String()[:3]) // abbreviation of weekdays
+			month = week.Month()
+		} else { // still in current month
+			fmt.Print(strings.Repeat(" ", 4))
+		}
+
+		week = week.AddDate(0, 0, 7) // move to next week
+
+		if week.After(cur) && !inSameWeek(week, cur) { // done
+			break
+		}
+	}
+	fmt.Println()
+}
+
+// Checks whether 2 given time is in the same week
+func inSameWeek(a, b time.Time) bool {
+	a = normalizeToUTCMidnight(a)
+	b = normalizeToUTCMidnight(b)
+
+	if a.After(b) {
+		a, b = b, a // ensure a is before b
+	}
+
+	gap := int(b.Sub(a).Hours() / 24)
+	if gap > 6 {
+		return false // not in the same week
+	}
+
+	return weekdayOffset(a) < weekdayOffset(b)
+}
+
+// Prints the abbreviation of the weekday.
+func printWeekday(wd int) {
+	res := strings.Repeat(" ", 5)
+	switch wd {
+	case 0: res = " Mon "
+	case 2: res = " Wed "
+	case 4: res = " Fri "
+	case 6: res = " Sun "
+	}
+
+	fmt.Print(res)
 }
